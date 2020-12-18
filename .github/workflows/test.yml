@@ -193,7 +193,7 @@ jobs:
             experimental: true
 
 
-    name: "${{ if matrix.coveralls != "false"; then echo "Cov"; else echo "Test"; fi }} - PHP ${{ matrix.php }} - PHPCS ${{ matrix.phpcs_version }}"
+    name: "${{ if [ matrix.coveralls != "false" ]; then echo "Cov"; else echo "Test"; fi }}: PHP ${{ matrix.php }} - PHPCS ${{ matrix.phpcs_version }}"
 
     continue-on-error: ${{ matrix.experimental }}
 
