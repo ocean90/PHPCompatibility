@@ -1,0 +1,299 @@
+name: Test
+
+on:
+  # Run on pushes, including merges, to `master` and on all pull requests.
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  #### PHP LINT STAGE ####
+  # Linting against high/low of each PHP major should catch everything.
+  # If needs be, we can always add interim versions back at a later point in time.
+  lint:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        php: ['5.4', '5.6', '7.0', '7.4', '8.0']
+        experimental: [false]
+
+        include:
+          - php: '8.1'
+            experimental: true
+
+    name: "Lint: PHP ${{ matrix.php }}"
+    continue-on-error: ${{ matrix.experimental }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: Tweak Composer dependencies
+        # Remove PHPUnit requirement to save some bandwidth.
+        run: composer remove --no-update phpunit/phpunit
+
+      # Install dependencies and handle caching in one go.
+      # @link https://github.com/marketplace/actions/install-composer-dependencies
+      - name: Install Composer dependencies
+        uses: "ramsey/composer-install@v1"
+
+      - name: Lint against parse errors
+        run: composer lint
+
+  #### TEST & CODE COVERAGE STAGE ####
+  # N.B.: Coverage is only checked on the lowest and highest stable PHP versions
+  # and low/high of each major for PHPCS.
+  test:
+    # No use running the tests if there is a linting error somewhere as they would fail anyway.
+    needs: lint
+
+    runs-on: ubuntu-latest
+
+    env:
+      PHP_INI_VALUES: error_reporting=E_ALL
+
+    strategy:
+      # Keys:
+      # coveralls: whether or not to run code coverage. Defaults to `false`.
+      #    Set to the version of the PHP Coveralls package to use to turn coverage on.
+      # custom_ini: whether to run with specific custom ini settings to hit very specific
+      #    code conditions. Only used in code coverage builds.
+      # experimental: whether the build is "allowed to fail".
+      matrix:
+        # IMPORTANT: test runs shouldn't fail because of PHPCS being incompatible with a PHP version.
+        # - PHPCS will run without errors on PHP 5.4 - 7.2 on any version.
+        # - PHP 7.3 needs PHPCS 2.9.2 and 3.3.1+ to run without errors.
+        #   On PHPCS 2.x our tests won't fail though.
+        # - PHP 7.4 needs PHPCS 3.5.0+ to run without errors.
+        #   On PHPCS 2.x our tests won't fail though.
+        # - PHP 8.0 needs PHPCS 3.5.7+ to run without errors.
+        #
+        # Also note: PHP 5.4, 7.3 and 8.0 are not included in this list.
+        # - PHP 5.4 is set up separately for coverage builds.
+        # - PHP 7.3 and 8.0 also target the PHPCS versions in the matrix for code coverage,
+        #   so are set up separately.
+        php: ['5.5', '5.6', '7.0', '7.1', '7.2', '7.4']
+        phpcs_version: ['2.6.0', 'dev-master']
+        custom_ini: [false]
+        coveralls: [false]
+        experimental: [false]
+
+        include:
+          # In addition to the matrix defined above, test against a variation of PHPCS 2.x and 3.x versions
+          # and set up specific code coverage builds.
+          - php: '8.0'
+            phpcs_version: 'dev-master'
+            custom_ini: true
+            coveralls: '^2.4'        # Code coverage build.
+            experimental: false
+          - php: '8.0'
+            phpcs_version: '~3.5.7'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+          - php: '8.0'
+            phpcs_version: '2.9.2'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+
+          - php: '7.4'
+            phpcs_version: '>=2.6,<3.0'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+
+          - php: '7.3'
+            phpcs_version: 'dev-master'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+          - php: '7.3'
+            phpcs_version: '3.4.*'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+          - php: '7.3'
+            phpcs_version: '2.6.0'
+            custom_ini: false
+            coveralls: '^2.4'        # Code coverage build.
+            experimental: false
+
+          - php: '7.2'
+            phpcs_version: '3.3.*'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+          - php: '7.2'
+            phpcs_version: '3.1.0'
+            custom_ini: false
+            coveralls: '^2.4'        # Code coverage build.
+            experimental: false
+
+          - php: '7.1'
+            phpcs_version: '3.1.*'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+
+          - php: '7.0'
+            phpcs_version: '2.6.*'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+
+          - php: '5.6'
+            phpcs_version: '2.8.*'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+
+          - php: '5.5'
+            phpcs_version: '3.2.*'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+          - php: '5.5'
+            phpcs_version: '2.7.*'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+
+          - php: '5.4'
+            phpcs_version: 'dev-master'
+            custom_ini: false
+            coveralls: '^1.0'        # Code coverage build.
+            experimental: false
+          - php: '5.4'
+            phpcs_version: '3.1.0'
+            custom_ini: false
+            coveralls: false
+            experimental: false
+          - php: '5.4'
+            phpcs_version: '>=2.6,<3.0'
+            custom_ini: true
+            coveralls: '^1.0'        # Code coverage build.
+            experimental: false
+          - php: '5.4'
+            phpcs_version: '2.6.0'
+            custom_ini: false
+            coveralls: '^1.0'        # Code coverage build.
+            experimental: false
+
+          # Experimental builds. These are allowed to fail.
+          - php: '7.4'
+            phpcs_version: '4.0.x-dev@dev'
+            custom_ini: false
+            coveralls: false
+            experimental: true
+          - php: '8.1' # Nightly.
+            phpcs_version: 'dev-master'
+            custom_ini: false
+            coveralls: false
+            experimental: true
+
+
+    name: "Test: PHP ${{ matrix.php }} - PHPCS ${{ matrix.phpcs_version }}"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # On stable PHPCS versions, allow for PHP deprecation notices.
+      # Unit tests don't need to fail on those for stable releases where those issues won't get fixed anymore.
+      - name: Override PHP ini values for old PHPCS versions
+        if: ${{ matrix.phpcs_version != 'dev-master' }}
+        run: echo "PHP_INI_VALUES::error_reporting=E_ALL & ~E_DEPRECATED" >> $GITHUB_ENV
+
+      - name: Set custom PHP ini values for some very specific test cases
+        if: ${{ matrix.custom_ini }}
+        run: echo "PHP_INI_VALUES::${{ env.PHP_INI_VALUES }} short_open_tag=On" >> $GITHUB_ENV
+
+      - name: Get code coverage driver
+        uses: actions/github-script@v3.1
+        id: code-coverage-driver
+        with:
+          script: 'return "${{ matrix.coveralls != false }}" ? "xdebug" : "none"'
+          result-encoding: string
+
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          ini-values: ${{ env.PHP_INI_VALUES }}
+          coverage: ${{ steps.code-coverage-driver.outputs.result }}
+
+      - name: 'Composer: set PHPCS version for tests'
+        run: |
+          # Remove devtools as it would block install on old PHPCS versions (< 3.0).
+          composer remove --no-update --dev phpcsstandards/phpcsdevtools
+          composer require --no-update squizlabs/php_codesniffer:"${{ matrix.phpcs_version }}"
+
+      - name: 'Composer: conditionally tweak PHPUnit version'
+        if: ${{ matrix.coveralls == false && startsWith( '8', matrix.php ) }}
+        # Temporary fix - PHPUnit 9.3+ is buggy when used for code coverage, so not allowed "normally".
+        # For tests which don't run code coverage, we can safely install it for PHP 8 though.
+        run: composer require --no-update phpunit/phpunit:"^9.3"
+
+      - name: 'Composer: conditionally add coveralls'
+        if: ${{ matrix.coveralls != false }}
+        # While only needed on success, doing this before the Composer install makes sure the download is cached.
+        run: composer require --no-update --dev php-coveralls/php-coveralls:"${{ matrix.coveralls }}"
+
+      # Install dependencies and handle caching in one go.
+      # @link https://github.com/marketplace/actions/install-composer-dependencies
+      - name: Install Composer dependencies - 1
+        if: ${{ matrix.coveralls == false || startsWith( '8', matrix.php ) == false  }}
+        uses: "ramsey/composer-install@v1"
+
+      # For the coverage builds, we need to install with ignore platform reqs as we're using PHPUnit < 9.3.
+      - name: Install Composer dependencies - 2
+        if: ${{ matrix.coveralls != false && startsWith( '8', matrix.php )}}
+        uses: "ramsey/composer-install@v1"
+        with:
+          composer-options: --ignore-platform-reqs
+
+      - name: Run the unit tests
+        if: ${{ matrix.coveralls == false }}
+        run: vendor/bin/phpunit --no-coverage
+
+      - name: Run the unit tests with code coverage
+        if: ${{ matrix.coveralls != false }}
+        run: vendor/bin/phpunit
+
+      - name: Upload coverage results to Coveralls PHP 5.4
+        if: ${{ success() && startsWith( '^1', matrix.coveralls )}}
+        env:
+          #PHP_VERSION: ${{ matrix.php }}
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_PARALLEL: true
+          COVERALLS_FLAG_NAME: php-${{ matrix.php }}-phpcs-${{ matrix.phpcs_version }}
+        run: vendor/bin/coveralls -v -x build/logs/clover.xml
+
+      - name: Upload coverage results to Coveralls PHP 7/8
+        if: ${{ success() && startsWith( '^2', matrix.coveralls )}}
+        env:
+          #PHP_VERSION: ${{ matrix.php }}
+          COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COVERALLS_PARALLEL: true
+          COVERALLS_FLAG_NAME: php-${{ matrix.php }}-phpcs-${{ matrix.phpcs_version }}
+        run: vendor/bin/php-coveralls -v -x build/logs/clover.xml
+
+  coveralls-finish:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
