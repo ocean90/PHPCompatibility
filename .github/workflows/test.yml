@@ -3,8 +3,8 @@ name: Test
 on:
   # Run on pushes, including merges, to `master` and on all pull requests.
   push:
-    branches:
-      - master
+#    branches:
+#      - master
   pull_request:
 
 jobs:
