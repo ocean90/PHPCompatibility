@@ -48,7 +48,6 @@ jobs:
           - php: '5.4'
             phpcs_version: 'dev-master'
             coveralls: '^1.0'        # Code coverage build.
-            experimental: false
 
           # In addition to the matrix defined above, test against a variation of PHPCS 2.x and 3.x versions
           # and add some more specific code coverage builds.
