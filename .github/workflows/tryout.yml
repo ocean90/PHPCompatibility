@@ -111,6 +111,7 @@ jobs:
           echo PHP_INI is - "${{ steps.vars.outputs.PHP_INI }}"
           echo PHP_CC_DRIVER is - "${{ steps.vars.outputs.PHP_CC_DRIVER }}"
           echo CC is - "${{ steps.vars.outputs.CC }}"
+          echo PHP8 is - "${{ startsWith( '8', matrix.php ) }}"
 
 
 
