@@ -36,16 +36,18 @@ jobs:
         phpcs_version: ['2.6.0', 'dev-master']
 #        custom_ini: [false]
 #        coveralls: [false]
-#        experimental: [false]
+        experimental: [false]
 
         include:
           # Augment select builds set up by the above matrix by setting additional properties.
           - php: '7.3'
             phpcs_version: '2.6.0'
             coveralls: '^2.4'        # Code coverage build.
+            experimental: false
           - php: '5.4'
             phpcs_version: 'dev-master'
             coveralls: '^1.0'        # Code coverage build.
+            experimental: false
 
           # In addition to the matrix defined above, test against a variation of PHPCS 2.x and 3.x versions
           # and add some more specific code coverage builds.
@@ -53,8 +55,10 @@ jobs:
             phpcs_version: 'dev-master'
             custom_ini: true
             coveralls: '^2.4'        # Code coverage build.
+            experimental: false
           - php: '8.0'
             phpcs_version: '~3.5.7'
+            experimental: false
 
           # Experimental builds. These are allowed to fail.
           - php: '7.4'
@@ -67,7 +71,7 @@ jobs:
 #    name: "${{ if [ matrix.coveralls != "false" ]; then echo "Cov"; else echo "Test"; fi }}: PHP ${{ matrix.php }} - PHPCS ${{ matrix.phpcs_version }}"
     name: "Test: PHP ${{ matrix.php }} - PHPCS ${{ matrix.phpcs_version }}"
 
-    continue-on-error: ${{ matrix.experimental == "true" }}
+    continue-on-error: ${{ matrix.experimental }}
 
     steps:
       - name: Checkout code
