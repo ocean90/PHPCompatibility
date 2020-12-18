@@ -111,7 +111,7 @@ jobs:
           echo PHP_INI is - "${{ steps.vars.outputs.PHP_INI }}"
           echo PHP_CC_DRIVER is - "${{ steps.vars.outputs.PHP_CC_DRIVER }}"
           echo CC is - "${{ steps.vars.outputs.CC }}"
-          echo PHP8 is - "${{ startsWith( '8', matrix.php ) }}"
+          echo PHP8 is - "${{ startsWith( matrix.php, '8' ) }}"
 
 
 
@@ -131,7 +131,7 @@ jobs:
 
       - name: 'Composer: conditionally tweak PHPUnit version'
         # TODO: this will need fixing
-        if: ${{ steps.vars.outputs.CC == 'off' && startsWith( '8', matrix.php ) }}
+        if: ${{ steps.vars.outputs.CC == 'off' && startsWith( matrix.php, '8' ) }}
         # Temporary fix - PHPUnit 9.3+ is buggy when used for code coverage, so not allowed "normally".
         # For tests which don't run code coverage, we can safely install it for PHP 8 though.
         run: composer require --no-update phpunit/phpunit:"^9.3"
@@ -146,12 +146,12 @@ jobs:
       # @link https://github.com/marketplace/actions/install-composer-dependencies
       - name: Install Composer dependencies - normal
         # TODO: this will need fixing
-        if: ${{ steps.vars.outputs.CC == 'off' || startsWith( '8', matrix.php ) == false  }}
+        if: ${{ steps.vars.outputs.CC == 'off' || startsWith( matrix.php, '8' ) == false  }}
         uses: "ramsey/composer-install@v1"
 
       # For the coverage builds, we need to install with ignore platform reqs as we're using PHPUnit < 9.3.
       - name: Install Composer dependencies - with ignore platform
-        if: ${{ steps.vars.outputs.CC == 'on' && startsWith( '8', matrix.php )}}
+        if: ${{ steps.vars.outputs.CC == 'on' && startsWith( matrix.php, '8' ) }}
         uses: "ramsey/composer-install@v1"
         with:
           composer-options: --ignore-platform-reqs
@@ -167,7 +167,7 @@ jobs:
         run: vendor/bin/phpunit
 
       - name: Upload coverage results to Coveralls PHP 5.4
-        if: ${{ steps.vars.outputs.CC == 'on' && success() && startsWith( '^1', matrix.coveralls )}}
+        if: ${{ steps.vars.outputs.CC == 'on' && success() && startsWith( matrix.coveralls, '^1' )}}
         env:
           #PHP_VERSION: ${{ matrix.php }}
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -176,7 +176,7 @@ jobs:
         run: vendor/bin/coveralls -v -x build/logs/clover.xml
 
       - name: Upload coverage results to Coveralls PHP 7/8
-        if: ${{ steps.vars.outputs.CC == 'on' && success() && startsWith( '^2', matrix.coveralls )}}
+        if: ${{ steps.vars.outputs.CC == 'on' && success() && startsWith( matrix.coveralls, '^2' )}}
         env:
           #PHP_VERSION: ${{ matrix.php }}
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
