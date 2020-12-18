@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       # Optional keys:
       # - coveralls: whether or not to run code coverage.
       #   Set to the version of the PHP Coveralls package to use to turn coverage on.
