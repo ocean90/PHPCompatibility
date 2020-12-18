@@ -57,9 +57,6 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    env:
-      PHP_INI_VALUES: error_reporting=E_ALL
-
     strategy:
       # Keys:
       # coveralls: whether or not to run code coverage. Defaults to `false`.
@@ -209,27 +206,39 @@ jobs:
 
       # On stable PHPCS versions, allow for PHP deprecation notices.
       # Unit tests don't need to fail on those for stable releases where those issues won't get fixed anymore.
+      # Also set the "short_open_tag" ini to make sure specific conditions are tested.
       - name: Override PHP ini values for old PHPCS versions
-        if: ${{ matrix.phpcs_version != 'dev-master' }}
-        run: echo "PHP_INI_VALUES::error_reporting=E_ALL & ~E_DEPRECATED" >> $GITHUB_ENV
-
-      - name: Set custom PHP ini values for some very specific test cases
-        if: ${{ matrix.custom_ini }}
-        run: echo "PHP_INI_VALUES::${{ env.PHP_INI_VALUES }} short_open_tag=On" >> $GITHUB_ENV
+        id: setup-ini-values
+        run: |
+          if [ ${{ matrix.custom_ini }} ]; then
+            if [ "${{ matrix.phpcs_version }}" != "dev-master" ]; then
+              echo '::set-output name=PHP_INI::error_reporting=E_ALL & ~E_DEPRECATED, short_open_tag=On'
+            else
+              echo '::set-output name=PHP_INI::short_open_tag=On'
+            fi
+          else
+            if [ "${{ matrix.phpcs_version }}" != "dev-master" ]; then
+              echo '::set-output name=PHP_INI::error_reporting=E_ALL & ~E_DEPRECATED'
+            else
+              echo '::set-output name=PHP_INI::error_reporting=E_ALL'
+            fi
+          fi
 
       - name: Get code coverage driver
-        uses: actions/github-script@v3.1
         id: code-coverage-driver
-        with:
-          script: 'return "${{ matrix.coveralls != false }}" ? "xdebug" : "none"'
-          result-encoding: string
+        run: |
+          if [ "${{ matrix.coveralls }}" != false ]; then
+            echo '::set-output name=CC_DRIVER::xdebug'
+          else
+            echo '::set-output name=CC_DRIVER::none'
+          fi
 
       - name: Install PHP
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          ini-values: ${{ env.PHP_INI_VALUES }}
-          coverage: ${{ steps.code-coverage-driver.outputs.result }}
+          ini-values: ${{ steps.setup-ini-values.outputs.PHP_INI }}
+          coverage: ${{ steps.code-coverage-driver.outputs.CC_DRIVER }}
 
       - name: 'Composer: set PHPCS version for tests'
         run: |
