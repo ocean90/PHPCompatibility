@@ -130,14 +130,14 @@ jobs:
 
       - name: 'Composer: conditionally tweak PHPUnit version'
         # TODO: this will need fixing
-        if: ${{ steps.vars.outputs.CC == 'Off' && startsWith( '8', matrix.php ) }}
+        if: ${{ steps.vars.outputs.CC == 'off' && startsWith( '8', matrix.php ) }}
         # Temporary fix - PHPUnit 9.3+ is buggy when used for code coverage, so not allowed "normally".
         # For tests which don't run code coverage, we can safely install it for PHP 8 though.
         run: composer require --no-update phpunit/phpunit:"^9.3"
 
       - name: 'Composer: conditionally add coveralls'
         # TODO: this will need fixing
-        if: ${{ steps.vars.outputs.CC == 'On' }}
+        if: ${{ steps.vars.outputs.CC == 'on' }}
         # While only needed on success, doing this before the Composer install makes sure the download is cached.
         run: composer require --no-update --dev php-coveralls/php-coveralls:"${{ matrix.coveralls }}"
 
@@ -145,28 +145,28 @@ jobs:
       # @link https://github.com/marketplace/actions/install-composer-dependencies
       - name: Install Composer dependencies - normal
         # TODO: this will need fixing
-        if: ${{ steps.vars.outputs.CC == 'Off' || startsWith( '8', matrix.php ) == false  }}
+        if: ${{ steps.vars.outputs.CC == 'off' || startsWith( '8', matrix.php ) == false  }}
         uses: "ramsey/composer-install@v1"
 
       # For the coverage builds, we need to install with ignore platform reqs as we're using PHPUnit < 9.3.
       - name: Install Composer dependencies - with ignore platform
-        if: ${{ steps.vars.outputs.CC == 'On' && startsWith( '8', matrix.php )}}
+        if: ${{ steps.vars.outputs.CC == 'on' && startsWith( '8', matrix.php )}}
         uses: "ramsey/composer-install@v1"
         with:
           composer-options: --ignore-platform-reqs
 
       - name: Run the unit tests
         # TODO: this will need fixing
-        if: ${{ steps.vars.outputs.CC == 'On' }}
+        if: ${{ steps.vars.outputs.CC == 'off' }}
         run: vendor/bin/phpunit --no-coverage
 
       - name: Run the unit tests with code coverage
         # TODO: this will need fixing
-        if: ${{ steps.vars.outputs.CC == 'Off' }}
+        if: ${{ steps.vars.outputs.CC == 'on' }}
         run: vendor/bin/phpunit
 
       - name: Upload coverage results to Coveralls PHP 5.4
-        if: ${{ steps.vars.outputs.CC == 'On' && success() && startsWith( '^1', matrix.coveralls )}}
+        if: ${{ steps.vars.outputs.CC == 'on' && success() && startsWith( '^1', matrix.coveralls )}}
         env:
           #PHP_VERSION: ${{ matrix.php }}
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -175,7 +175,7 @@ jobs:
         run: vendor/bin/coveralls -v -x build/logs/clover.xml
 
       - name: Upload coverage results to Coveralls PHP 7/8
-        if: ${{ steps.vars.outputs.CC == 'On' && success() && startsWith( '^2', matrix.coveralls )}}
+        if: ${{ steps.vars.outputs.CC == 'on' && success() && startsWith( '^2', matrix.coveralls )}}
         env:
           #PHP_VERSION: ${{ matrix.php }}
           COVERALLS_REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
