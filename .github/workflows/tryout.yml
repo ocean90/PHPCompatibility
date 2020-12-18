@@ -67,7 +67,7 @@ jobs:
 #    name: "${{ if [ matrix.coveralls != "false" ]; then echo "Cov"; else echo "Test"; fi }}: PHP ${{ matrix.php }} - PHPCS ${{ matrix.phpcs_version }}"
     name: "Test: PHP ${{ matrix.php }} - PHPCS ${{ matrix.phpcs_version }}"
 
-    continue-on-error: ${{ matrix.experimental }}
+    continue-on-error: ${{ matrix.experimental == "true" }}
 
     steps:
       - name: Checkout code
@@ -117,7 +117,7 @@ jobs:
 
       - name: 'Composer: conditionally tweak PHPUnit version'
         # TODO: this will need fixing
-        if: ${{ matrix.coveralls == "false" && startsWith( '8', matrix.php ) }}
+        if: ${{ ! matrix.coveralls && startsWith( '8', matrix.php ) }}
         # Temporary fix - PHPUnit 9.3+ is buggy when used for code coverage, so not allowed "normally".
         # For tests which don't run code coverage, we can safely install it for PHP 8 though.
         run: composer require --no-update phpunit/phpunit:"^9.3"
@@ -132,7 +132,7 @@ jobs:
       # @link https://github.com/marketplace/actions/install-composer-dependencies
       - name: Install Composer dependencies - 1
         # TODO: this will need fixing
-        if: ${{ matrix.coveralls == false || startsWith( '8', matrix.php ) == false  }}
+        if: ${{ ! matrix.coveralls || startsWith( '8', matrix.php ) == false  }}
         uses: "ramsey/composer-install@v1"
 
       # For the coverage builds, we need to install with ignore platform reqs as we're using PHPUnit < 9.3.
@@ -144,7 +144,7 @@ jobs:
 
       - name: Run the unit tests
         # TODO: this will need fixing
-        if: ${{ matrix.coveralls == "false" }}
+        if: ${{ ! matrix.coveralls }}
         run: vendor/bin/phpunit --no-coverage
 
       - name: Run the unit tests with code coverage
